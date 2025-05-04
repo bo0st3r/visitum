@@ -1,4 +1,4 @@
-Name,City,Country,Visitors_Count,Visitors_Year,Population
+name,city,country,visitors_count,visitors_year,population
 Louvre,Paris,France,8700000,2024,2138551
 Vatican Museums,"Vatican City, Rome",Vatican,6825436,2024,2318895
 National Museum of China,Beijing,China,6300000,2024,18960744

@@ -16,16 +16,15 @@ Build and containerize a Python application that extracts museum visitor data (W
 
 ### Current Implementation
 
-The exploratory ETL pipeline is now implemented in `etl_exploration.py`. It:
+The project currently implements the Extract and Transform (ET) phases of the data pipeline within the `src/visitum/data` package. 
 
-1. Extracts museum visitor data from Wikipedia using the MediaWiki API
-2. Cleans and transforms data, filtering museums with >1.25M visitors in 2024
-3. Uses the geocoder library to fetch city population data in parallel
-4. Handles special cases like compound cities ("Vatican City, Rome")
-5. Saves the enriched data to CSV for subsequent analysis
+Key components include:
+*   **`extraction.py`**: Fetches raw museum data from Wikipedia and city population data using the `geocoder` library.
+*   **`transformation.py`**: Cleans, filters (Year 2024, >1.25M visitors), and enriches the museum data with corresponding city populations, handling parallel processing and edge cases like compound city names.
+*   **`config.py`**: Stores configuration parameters (API endpoints, filtering thresholds, etc.).
+*   **`models.py`**: Defines data structures like `FetchFailureReason`.
 
-The initial dataset is created and stored in `enriched_museum_data.csv` including museum names, cities, countries, visitor counts, and metropolitan populations.
-Later, it is saved to the database (SQLite).
+A script (`etl_exploration.py`) orchestrates these modules, running the ET steps and saving the resulting DataFrame to a CSV file (`data/enriched_museum_data.csv`). The next phase involves loading this data into a database.
 
 ## ETL Pipeline
 
@@ -35,31 +34,33 @@ Later, it is saved to the database (SQLite).
 
 Museums with over 1,250,000 annual visitors [(Wikipedia)](https://en.wikipedia.org/wiki/List_of_most-visited_museums)
 
-Using the MediaWiki API with direct `requests` to fetch HTML content, then extracting tables using pandas' read_html functionality. This approach is more flexible than using BeautifulSoup and allows for better error handling.
+Logic resides in `src/visitum/data/extraction.py`:
+- Uses `requests` and the MediaWiki API (`config.WIKIPEDIA_API_URL`) to fetch HTML.
+- Uses `pandas.read_html` with matching (`config.MUSEUMS_VISITORS_MATCH_PATTERN`) and fallback logic to extract the table.
 
 #### City Population Source
 
-The city population is retrieved using the `geocoder` library, which provides access to geographic data including city population from different providers, currently using the Geonames provider. It allows us to reliably retrieve the population of a city, and without the need for standardizing the city name and country name (e.g. USA | US | United States | United States of America).
+Logic resides in `src/visitum/data/extraction.py`:
+- Uses the `geocoder` library with the `geonames` provider (`config.GEONAMES_USERNAME`).
+- Implements retry logic (`config.MAX_GEOCODER_RETRIES`).
+- Fetches city proper population.
 
-**Improvement idea:** Metropolitan population is a better proxy for the number of people that will visit the museums, but it is not always available with public APIs. Therefore, the implementation currently uses city proper populations from Geonames which is the only geocoder provider that provides population data reliably. Using the metropolitan population would be a good improvement to make.
+**Improvement idea:** Metropolitan population is a better proxy, but Geonames primarily provides city proper data. Exploring alternative providers or data sources for metropolitan area population remains a future improvement.
 
-**Special cases:** For museums located in "multiple cities" (e.g., "Vatican City, Rome", "London, South Kensington"), we either (1) have a special case in the code to handle it or (2) we retrieve the population of each city separately by splitting the city name on commas and using the maximum population value rather than summing them to prevent double-counting when locations are within the same metropolitan area. This is not a perfect solution, but it is a good compromise for now that allows for new edge cases to be added without having to change the code.
+**Special cases:** Handled in `src/visitum/data/transformation.py` (`handle_compound_city` function). Specific rules (e.g., Vatican City -> Rome) are currently hardcoded; moving these to config or a database lookup table would be more flexible. The general approach splits comma-separated city strings and uses the population of the largest identified part.
 
 ### Transformation
 
-- **Data Cleaning**:
-  - **Visitor Count Column**: Parse various formats (e.g., "8,700,000", "6.3 million"), remove references (e.g., `[1]`), strip extra text (e.g., "(as of...)"), handle commas, and convert to a numeric type. Handle potential missing values.
-  - **Year Extraction**: Extract the year associated with the visitor count (often in parentheses) and filter data to include only entries explicitly marked as 2024.
-  - **City Name Standardization**: Clean city names (e.g., removing state/district info like in "Washington, D.C." or handling multi-city entries like "Vatican City, Rome") to ensure consistent matching with population data sources.
-  - **General**: Handle potential missing values in other relevant columns (Name, City, Country).
-- **Data Structuring**: Organize the cleaned data into a structured format (Pandas DataFrame) suitable for storage and analysis.
-- **Feature Engineering**: Create the final features for the ML model (Standardized City Name/ID, Metropolitan Population, 2024 Visitor Count).
+Logic resides in `src/visitum/data/transformation.py`:
+
+- **Data Cleaning (`clean_museum_data`)**: Standardizes column names, parses/cleans visitor counts and years using regex, filters by year (2024) and visitor count (>1.25M), selects and renames final columns, cleans city name strings.
+- **Data Enrichment (`enrich_museums_with_city_population`)**: Uses `concurrent.futures` to fetch population data in parallel for unique city/country pairs, maps results back to the DataFrame, handles fetch failures gracefully (logging and using `pd.NA`).
 
 ### Loading
 
-- **Database Choice**: Use a lightweight database suitable for rapid prototyping and potential scalability. SQLite is a good initial choice, deployable within the Docker container. For greater scalability, PostgreSQL could be considered later.
-- **Schema Design**: Define a simple schema to store museum details (Name, City, Country, 2024 Visitor Count) and city population data (City, Country, Metropolitan Population).
-- **Data Insertion**: Load the transformed data into the chosen database.
+- **Target**: A database (initially SQLite) to store the processed data, suitable for containerized deployment.
+- **Module**: Logic resides in `src/visitum/data/loading.py`.
+- **Process**: Takes the final DataFrame produced by the transformation step and inserts it into the database according to the defined schema.
 
 ## Project Structure
 
@@ -75,28 +76,28 @@ visitum/
 ├── requirements.txt     # Python dependencies
 ├── setup.py             # Packaging script (optional but good practice)
 ├── src/
-│   ├── visitum/
+│   ├── __init__.py
+│   ├── config.py        # Configuration settings
+│   ├── data/            # Data processing modules (ETL)
 │   │   ├── __init__.py
-│   │   ├── config.py        # Configuration settings
-│   │   ├── data/            # Data processing modules (ETL)
-│   │   │   ├── __init__.py
-│   │   │   ├── extraction.py  # Data extraction logic (Wikipedia, Population)
-│   │   │   ├── transformation.py # Data cleaning and transformation
-│   │   │   └── loading.py     # Database loading logic
-│   │   ├── db/              # Database interaction modules
-│   │   │   ├── __init__.py
-│   │   │   └── models.py    # Database models (e.g., SQLAlchemy)
-│   │   │   └── operations.py # CRUD operations
-│   │   ├── ml/              # Machine Learning modules
-│   │   │   ├── __init__.py
-│   │   │   ├── model.py     # Linear Regression model training/prediction
-│   │   │   └── utils.py     # ML utilities
-│   │   ├── api/             # API exposure (e.g., FastAPI)
-│   │   │   ├── __init__.py
-│   │   │   ├── main.py      # API entry point
-│   │   │   └── endpoints.py # API routes
-│   │   └── utils/           # Shared utilities
-│   │       └── __init__.py
+│   │   ├── models.py      # Data enums/models (FetchFailureReason)
+│   │   ├── extraction.py  # Data extraction logic (Wikipedia, Population)
+│   │   ├── transformation.py # Data cleaning and transformation
+│   │   └── loading.py     # Database loading logic
+│   ├── db/              # Database interaction modules
+│   │   ├── __init__.py
+│   │   └── models.py    # Database models (e.g., SQLAlchemy)
+│   │   └── operations.py # CRUD operations
+│   ├── ml/              # Machine Learning modules
+│   │   ├── __init__.py
+│   │   ├── model.py     # Linear Regression model training/prediction
+│   │   └── utils.py     # ML utilities
+│   ├── api/             # API exposure (e.g., FastAPI)
+│   │   ├── __init__.py
+│   │   ├── main.py      # API entry point
+│   │   └── endpoints.py # API routes
+│   └── utils/           # Shared utilities
+│       └── __init__.py
 │
 ├── notebooks/
 │   └── analysis.ipynb     # Jupyter notebook for visualization
@@ -113,11 +114,11 @@ visitum/
 ## Technology Stack
 
 - **Programming Language**: Python 3.11+
-- **Museum Visitors Data Extraction**: `requests` for API calls, `pandas.read_html` for table extraction
-- **City Population Data Extraction**: `geocoder` library with Geonames provider
-- **Data Manipulation**: `Pandas`
-- **Parallel Processing**: `concurrent.futures` for parallel population data fetching
-- **Data Storage**: Currently CSV, planned database integration
+- **Museum Visitors Data Extraction**: `requests`, `pandas.read_html` (`src/visitum/data/extraction.py`)
+- **City Population Data Extraction**: `geocoder` library (`src/visitum/data/extraction.py`)
+- **Data Manipulation**: `Pandas` (`src/visitum/data/transformation.py`)
+- **Data Storage**: CSV output (`etl_exploration.py`), Database (`SQLite` via `src/visitum/db`)
+- **Configuration**: Python file (`src/visitum/config.py`)
 - **ML Library**: `scikit-learn`
 - **Containerization**: `Docker`, `Docker Compose`
 - **Notebook Environment**: `JupyterLab` or `Jupyter Notebook`
