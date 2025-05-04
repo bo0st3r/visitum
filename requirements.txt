@@ -1,0 +1,11 @@
+wikipedia-api
+pandas
+requests
+beautifulsoup4
+jupyterlab
+matplotlib
+seaborn
+scikit-learn 
+lxml
+html5lib
+geocoder
