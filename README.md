@@ -16,7 +16,7 @@ Build and containerize a Python application that extracts museum visitor data (W
 
 ### Current Implementation
 
-The project currently implements the Extract and Transform (ET) phases of the data pipeline within the `src/visitum/data` package. 
+The project currently implements the Extract and Transform (ET) phases of the data pipeline within the `src/data` package. 
 
 Key components include:
 *   **`extraction.py`**: Fetches raw museum data from Wikipedia and city population data using the `geocoder` library.
@@ -34,24 +34,24 @@ A script (`etl_exploration.py`) orchestrates these modules, running the ET steps
 
 Museums with over 1,250,000 annual visitors [(Wikipedia)](https://en.wikipedia.org/wiki/List_of_most-visited_museums)
 
-Logic resides in `src/visitum/data/extraction.py`:
+Logic resides in `src/data/extraction.py`:
 - Uses `requests` and the MediaWiki API (`config.WIKIPEDIA_API_URL`) to fetch HTML.
 - Uses `pandas.read_html` with matching (`config.MUSEUMS_VISITORS_MATCH_PATTERN`) and fallback logic to extract the table.
 
 #### City Population Source
 
-Logic resides in `src/visitum/data/extraction.py`:
+Logic resides in `src/data/extraction.py`:
 - Uses the `geocoder` library with the `geonames` provider (`config.GEONAMES_USERNAME`).
 - Implements retry logic (`config.MAX_GEOCODER_RETRIES`).
 - Fetches city proper population.
 
 **Improvement idea:** Metropolitan population is a better proxy, but Geonames primarily provides city proper data. Exploring alternative providers or data sources for metropolitan area population remains a future improvement.
 
-**Special cases:** Handled in `src/visitum/data/transformation.py` (`handle_compound_city` function). Specific rules (e.g., Vatican City -> Rome) are currently hardcoded; moving these to config or a database lookup table would be more flexible. The general approach splits comma-separated city strings and uses the population of the largest identified part.
+**Special cases:** Handled in `src/data/transformation.py` (`handle_compound_city` function). Specific rules (e.g., Vatican City -> Rome) are currently hardcoded; moving these to config or a database lookup table would be more flexible. The general approach splits comma-separated city strings and uses the population of the largest identified part.
 
 ### Transformation
 
-Logic resides in `src/visitum/data/transformation.py`:
+Logic resides in `src/data/transformation.py`:
 
 - **Data Cleaning (`clean_museum_data`)**: Standardizes column names, parses/cleans visitor counts and years using regex, filters by year (2024) and visitor count (>1.25M), selects and renames final columns, cleans city name strings.
 - **Data Enrichment (`enrich_museums_with_city_population`)**: Uses `concurrent.futures` to fetch population data in parallel for unique city/country pairs, maps results back to the DataFrame, handles fetch failures gracefully (logging and using `pd.NA`).
@@ -59,7 +59,7 @@ Logic resides in `src/visitum/data/transformation.py`:
 ### Loading
 
 - **Target**: A database (initially SQLite) to store the processed data, suitable for containerized deployment.
-- **Module**: Logic resides in `src/visitum/data/loading.py`.
+- **Module**: Logic resides in `src/data/loading.py`.
 - **Process**: Takes the final DataFrame produced by the transformation step and inserts it into the database according to the defined schema.
 
 ## Project Structure
@@ -114,11 +114,11 @@ visitum/
 ## Technology Stack
 
 - **Programming Language**: Python 3.11+
-- **Museum Visitors Data Extraction**: `requests`, `pandas.read_html` (`src/visitum/data/extraction.py`)
-- **City Population Data Extraction**: `geocoder` library (`src/visitum/data/extraction.py`)
-- **Data Manipulation**: `Pandas` (`src/visitum/data/transformation.py`)
-- **Data Storage**: CSV output (`etl_exploration.py`), Database (`SQLite` via `src/visitum/db`)
-- **Configuration**: Python file (`src/visitum/config.py`)
+- **Museum Visitors Data Extraction**: `requests`, `pandas.read_html` (`src/data/extraction.py`)
+- **City Population Data Extraction**: `geocoder` library (`src/data/extraction.py`)
+- **Data Manipulation**: `Pandas` (`src/data/transformation.py`)
+- **Data Storage**: CSV output (`etl_exploration.py`), Database (`SQLite` via `src/db`)
+- **Configuration**: Python file (`src/config.py`)
 - **ML Library**: `scikit-learn`
 - **Containerization**: `Docker`, `Docker Compose`
 - **Notebook Environment**: `JupyterLab` or `Jupyter Notebook`
