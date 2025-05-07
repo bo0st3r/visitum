@@ -9,3 +9,5 @@ scikit-learn
 lxml
 html5lib
 geocoder
+SQLAlchemy>=1.4
+joblib

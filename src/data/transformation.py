@@ -9,7 +9,6 @@ import config
 from data.models import FetchFailureReason
 from data.extraction import fetch_city_population_with_geocoder
 
-logger = logging.getLogger(__name__)
 
 def clean_museum_data(df: pd.DataFrame) -> Optional[pd.DataFrame]:
     """
@@ -28,14 +27,14 @@ def clean_museum_data(df: pd.DataFrame) -> Optional[pd.DataFrame]:
         Cleaned and filtered DataFrame, or None if processing fails.
     """
     if df is None or df.empty:
-        logger.warning("Input DataFrame for cleaning is None or empty.")
+        logging.warning("Input DataFrame for cleaning is None or empty.")
         return None
 
     cleaned_df = df.copy()
 
     # Standardize column names (lowercase, replace space with underscore)
     cleaned_df.columns = [str(col).strip().lower().replace(' ', '_') for col in cleaned_df.columns]
-    logger.debug(f"Standardized columns: {cleaned_df.columns.tolist()}")
+    logging.debug(f"Standardized columns: {cleaned_df.columns.tolist()}")
 
     # --- Visitor Count and Year Extraction ---
     visitor_col = None
@@ -47,22 +46,22 @@ def clean_museum_data(df: pd.DataFrame) -> Optional[pd.DataFrame]:
     for col in possible_visitor_cols:
         if col in cleaned_df.columns:
             visitor_col = col
-            logger.info(f"Using column '{visitor_col}' for visitor data.")
+            logging.info(f"Using column '{visitor_col}' for visitor data.")
             break
     # If not found, try a broader search
     if not visitor_col:
         for col in cleaned_df.columns:
             if 'visitors' in col and ('2024' in col or 'year' in col):
                 visitor_col = col
-                logger.info(f"Using column '{visitor_col}' based on content search.")
+                logging.info(f"Using column '{visitor_col}' based on content search.")
                 break
 
     if not visitor_col:
-        logger.error("Could not identify the visitor count column. Cannot proceed with cleaning.")
+        logging.error("Could not identify the visitor count column. Cannot proceed with cleaning.")
         # Check if any column name contains 'visitor'
         fallback = [col for col in cleaned_df.columns if 'visitor' in col]
         if fallback:
-            logger.warning(f"Potential visitor columns found but not used: {fallback}")
+            logging.warning(f"Potential visitor columns found but not used: {fallback}")
         return None
 
     def _extract_visitor_info(value_str):
@@ -81,11 +80,10 @@ def clean_museum_data(df: pd.DataFrame) -> Optional[pd.DataFrame]:
                 count = float(num_str)
                 if 'million' in value_str.lower():
                     count *= 1_000_000
-                # TODO: Consider handling 'billion' or other units if necessary
                 return int(count), year
             return None, year # No number found
         except Exception as e:
-            logger.warning(f"Could not parse visitor info from '{value_str}': {e}")
+            logging.warning(f"Could not parse visitor info from '{value_str}': {e}")
             return None, None
 
     visitor_data = cleaned_df[visitor_col].apply(_extract_visitor_info)
@@ -96,10 +94,10 @@ def clean_museum_data(df: pd.DataFrame) -> Optional[pd.DataFrame]:
     original_rows = len(cleaned_df)
     cleaned_df = cleaned_df.dropna(subset=['visitors_count'])
     if len(cleaned_df) < original_rows:
-        logger.info(f"Dropped {original_rows - len(cleaned_df)} rows due to missing visitor counts after parsing.")
+        logging.info(f"Dropped {original_rows - len(cleaned_df)} rows due to missing visitor counts after parsing.")
 
     if cleaned_df.empty:
-        logger.warning("DataFrame empty after dropping rows with missing visitor counts.")
+        logging.warning("DataFrame empty after dropping rows with missing visitor counts.")
         return cleaned_df # Return empty df
 
     # Convert count and year to integer types
@@ -107,18 +105,18 @@ def clean_museum_data(df: pd.DataFrame) -> Optional[pd.DataFrame]:
     cleaned_df['visitors_year'] = cleaned_df['visitors_year'].astype(int)
 
     # --- Filtering ---
-    logger.info(f"Rows before filtering: {len(cleaned_df)}")
+    logging.info(f"Rows before filtering: {len(cleaned_df)}")
     # 1. Filter for Year == 2024
     cleaned_df = cleaned_df[cleaned_df['visitors_year'] == 2024].copy()
-    logger.info(f"Rows after filtering for Year == 2024: {len(cleaned_df)}")
+    logging.info(f"Rows after filtering for Year == 2024: {len(cleaned_df)}")
 
     # 2. Filter for Visitors > 1,250,000
     min_visitors = 1_250_000
     cleaned_df = cleaned_df[cleaned_df['visitors_count'] > min_visitors].copy()
-    logger.info(f"Rows after filtering for Visitors > {min_visitors:,}: {len(cleaned_df)}")
+    logging.info(f"Rows after filtering for Visitors > {min_visitors:,}: {len(cleaned_df)}")
 
     if cleaned_df.empty:
-        logger.warning("No museums remained after filtering. Returning empty DataFrame.")
+        logging.warning("No museums remained after filtering. Returning empty DataFrame.")
         return cleaned_df
 
     # --- Final Column Selection and Renaming ---
@@ -143,11 +141,11 @@ def clean_museum_data(df: pd.DataFrame) -> Optional[pd.DataFrame]:
             for col in cleaned_df.columns:
                 if source_col_pattern in col:
                     cols_to_select[target_col] = col
-                    logger.debug(f"Mapped target '{target_col}' to source '{col}' (partial match)")
+                    logging.debug(f"Mapped target '{target_col}' to source '{col}' (partial match)")
                     found = True
                     break
         if not found:
-             logger.warning(f"Could not find a source column for target '{target_col}'. It will be missing.")
+             logging.warning(f"Could not find a source column for target '{target_col}'. It will be missing.")
 
     # Select and rename columns based on the mapping
     cleaned_df = cleaned_df[[source for source in cols_to_select.values()]].copy()
@@ -157,7 +155,7 @@ def clean_museum_data(df: pd.DataFrame) -> Optional[pd.DataFrame]:
     essential_cols = ['name', 'city', 'country', 'visitors_count']
     missing_essentials = [col for col in essential_cols if col not in cleaned_df.columns]
     if missing_essentials:
-        logger.error(f"Essential columns missing after final selection: {missing_essentials}")
+        logging.error(f"Essential columns missing after final selection: {missing_essentials}")
         # Decide whether to return None or the incomplete DataFrame
         # return None
 
@@ -165,9 +163,9 @@ def clean_museum_data(df: pd.DataFrame) -> Optional[pd.DataFrame]:
     if 'city' in cleaned_df.columns:
         cleaned_df['city'] = cleaned_df['city'].astype(str).str.replace(r'\[\d+\]', '', regex=True).str.strip()
     else:
-        logger.warning("Column 'city' not found for final cleaning.")
+        logging.warning("Column 'city' not found for final cleaning.")
 
-    logger.info(f"Cleaning complete. Final shape: {cleaned_df.shape}")
+    logging.info(f"Cleaning complete. Final shape: {cleaned_df.shape}")
     return cleaned_df
 
 def handle_compound_city(city_string: str, country: str) -> Optional[int]:
@@ -191,11 +189,11 @@ def handle_compound_city(city_string: str, country: str) -> Optional[int]:
     country_lower = country.lower()
 
     if 'vatican' in city_lower and 'vatican' in country_lower:
-        logger.info(f"Applying rule: '{original_city_string}, {original_country}' -> 'Rome, Italy'")
+        logging.info(f"Applying rule: '{original_city_string}, {original_country}' -> 'Rome, Italy'")
         city_string = "Rome"
         country = "Italy"
     elif 'london' in city_lower and 'south kensington' in city_lower:
-        logger.info(f"Applying rule: '{original_city_string}, {original_country}' -> 'London, United Kingdom'")
+        logging.info(f"Applying rule: '{original_city_string}, {original_country}' -> 'London, United Kingdom'")
         city_string = "London"
         country = "United Kingdom"
     # Add more rules here as needed
@@ -204,7 +202,7 @@ def handle_compound_city(city_string: str, country: str) -> Optional[int]:
     cities = [city.strip() for city in city_string.split(',') if city.strip()]
 
     if not cities:
-        logger.warning(f"Could not extract any city names from '{original_city_string}'")
+        logging.warning(f"Could not extract any city names from '{original_city_string}'")
         return FetchFailureReason.NO_DATA_FOR_COMPOUND_CITY # Or a more specific reason
 
     if len(cities) == 1:
@@ -212,7 +210,7 @@ def handle_compound_city(city_string: str, country: str) -> Optional[int]:
         return fetch_city_population_with_geocoder(cities[0], country)
 
     # --- Multiple Cities Detected --- #
-    logger.info(f"Handling multiple cities for '{original_city_string}, {original_country}': {cities}")
+    logging.info(f"Handling multiple cities for '{original_city_string}, {original_country}': {cities}")
     populations = {}
     failure_reasons = {}
 
@@ -222,22 +220,22 @@ def handle_compound_city(city_string: str, country: str) -> Optional[int]:
             populations[city_part] = pop_result
         else:
             failure_reasons[city_part] = pop_result
-            logger.warning(f"Population lookup failed for part '{city_part}' of '{original_city_string}, {original_country}'. Reason: {pop_result}")
+            logging.warning(f"Population lookup failed for part '{city_part}' of '{original_city_string}, {original_country}'. Reason: {pop_result}")
 
     if not populations:
-        logger.error(f"Could not retrieve population for any part of '{original_city_string}, {original_country}'. Failures: {failure_reasons}")
+        logging.error(f"Could not retrieve population for any part of '{original_city_string}, {original_country}'. Failures: {failure_reasons}")
         # Return the most severe failure reason, or a general one
         return FetchFailureReason.NO_DATA_FOR_COMPOUND_CITY
     elif len(populations) == 1:
         # Only one part yielded a population
         city_found, pop_found = list(populations.items())[0]
-        logger.info(f"Using population {pop_found} from '{city_found}' for '{original_city_string}, {original_country}'")
+        logging.info(f"Using population {pop_found} from '{city_found}' for '{original_city_string}, {original_country}'")
         return pop_found
     else:
         # Multiple parts yielded populations, choose the largest (proxy for metro area)
         largest_city = max(populations, key=populations.get)
         max_pop = populations[largest_city]
-        logger.info(f"Multiple populations found for '{original_city_string}, {original_country}': {populations}. Using max pop {max_pop} from '{largest_city}'.")
+        logging.info(f"Multiple populations found for '{original_city_string}, {original_country}': {populations}. Using max pop {max_pop} from '{largest_city}'.")
         return max_pop
 
 def _city_population_worker(city_country_pair: Tuple[str, str]) -> Tuple[Tuple[str, str], Optional[int]]:
@@ -247,7 +245,7 @@ def _city_population_worker(city_country_pair: Tuple[str, str]) -> Tuple[Tuple[s
         population = handle_compound_city(city, country)
         return (city_country_pair, population)
     except Exception as e:
-        logger.error(f"Unhandled exception in population worker for {city_country_pair}: {e}")
+        logging.error(f"Unhandled exception in population worker for {city_country_pair}: {e}")
         return (city_country_pair, None) # Return None on unexpected worker error
 
 def enrich_museums_with_city_population(museums_df: pd.DataFrame) -> pd.DataFrame:
@@ -262,14 +260,14 @@ def enrich_museums_with_city_population(museums_df: pd.DataFrame) -> pd.DataFram
 pd.NA (if lookup failed), or potentially FetchFailureReason codes initially.
     """
     if 'city' not in museums_df.columns or 'country' not in museums_df.columns:
-        logger.error("Missing 'city' or 'country' column. Cannot enrich with population.")
+        logging.error("Missing 'city' or 'country' column. Cannot enrich with population.")
         museums_df['population'] = pd.NA # Add column but mark as Not Available
         return museums_df
 
     # Get unique city-country pairs as tuples, handling potential NaN values
     # Convert to list of tuples directly
     city_country_pairs = [tuple(x) for x in museums_df[['city', 'country']].dropna().drop_duplicates().values]
-    logger.info(f"Fetching population data for {len(city_country_pairs)} unique city-country pairs using up to {config.MAX_POPULATION_WORKERS} workers.")
+    logging.info(f"Fetching population data for {len(city_country_pairs)} unique city-country pairs using up to {config.MAX_POPULATION_WORKERS} workers.")
 
     populations_map = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=config.MAX_POPULATION_WORKERS) as executor:
@@ -289,17 +287,17 @@ pd.NA (if lookup failed), or potentially FetchFailureReason codes initially.
                 populations_map[pair_result] = population_result
                 # Log specific failures immediately
                 if isinstance(population_result, FetchFailureReason):
-                    logger.warning(f"Population lookup for {pair_result} failed with reason: {population_result.name}")
+                    logging.warning(f"Population lookup for {pair_result} failed with reason: {population_result.name}")
                 elif population_result is None:
-                     logger.error(f"Population lookup for {pair_result} returned None unexpectedly.")
+                     logging.error(f"Population lookup for {pair_result} returned None unexpectedly.")
 
             except Exception as exc:
-                logger.error(f'Worker for {pair} generated an exception: {exc}')
+                logging.error(f'Worker for {pair} generated an exception: {exc}')
                  # Ensure pair is a tuple for the key here as well
                 populations_map[pair] = None # Mark as None on worker exception
 
             if completed % 10 == 0 or completed == total:
-                logger.info(f"Processed {completed}/{total} city populations...")
+                logging.info(f"Processed {completed}/{total} city populations...")
 
     # Map populations back to the main DataFrame
     def get_population(row):
@@ -317,10 +315,10 @@ pd.NA (if lookup failed), or potentially FetchFailureReason codes initially.
     failed_lookups = pop_col.apply(lambda x: isinstance(x, FetchFailureReason)).sum()
     na_values = pop_col.isna().sum()
 
-    logger.info(f"Population enrichment complete. Total museums processed: {total_rows}")
-    logger.info(f"- Museums with valid population data: {valid_pop_count}")
-    logger.info(f"- Museums where population lookup failed (specific reason recorded): {failed_lookups}")
-    logger.info(f"- Museums with population marked NA (lookup error or missing key): {na_values}")
+    logging.info(f"Population enrichment complete. Total museums processed: {total_rows}")
+    logging.info(f"- Museums with valid population data: {valid_pop_count}")
+    logging.info(f"- Museums where population lookup failed (specific reason recorded): {failed_lookups}")
+    logging.info(f"- Museums with population marked NA (lookup error or missing key): {na_values}")
 
     # Optionally replace FetchFailureReason codes with pd.NA for cleaner output/storage
     museums_df['population'] = museums_df['population'].apply(lambda x: pd.NA if isinstance(x, FetchFailureReason) else x)
@@ -328,8 +326,8 @@ pd.NA (if lookup failed), or potentially FetchFailureReason codes initially.
     # Log cities associated with NA values after replacement
     missing_cities_df = museums_df[museums_df['population'].isna()][['city', 'country']].drop_duplicates()
     if not missing_cities_df.empty:
-        logger.warning(f"Cities with missing population data after enrichment ({len(missing_cities_df)} unique pairs):")
+        logging.warning(f"Cities with missing population data after enrichment ({len(missing_cities_df)} unique pairs):")
         for _, row in missing_cities_df.iterrows():
-            logger.warning(f"  - {row['city']}, {row['country']}")
+            logging.warning(f"  - {row['city']}, {row['country']}")
 
     return museums_df 

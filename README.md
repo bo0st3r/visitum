@@ -41,7 +41,7 @@ Logic resides in `src/data/extraction.py`:
 #### City Population Source
 
 Logic resides in `src/data/extraction.py`:
-- Uses the `geocoder` library with the `geonames` provider (`config.GEONAMES_USERNAME`).
+- Uses the `geocoder` library with the `geonames` provider (it takes a `geonames` account to use the API).
 - Implements retry logic (`config.MAX_GEOCODER_RETRIES`).
 - Fetches city proper population.
 
@@ -151,7 +151,8 @@ visitum/
 - **Population Data Source**: Currently using geocoder with Geonames provider. This provides city proper populations but may not always reflect metropolitan areas accurately. Future improvements needed.
 - **Scalability**:
   - **Database**: Implement proper database storage (SQLite for development, PostgreSQL for production)
-  - **API**: Develop FastAPI endpoints to expose data and predictions
+  - **Caching**: Cache the wikipedia results, geocoder results, the model, its predictions, etc.
+  - **API**: Develop FastAPI endpoints to expose data and predictions, with horizontal scaling in mind.
   - **ETL**: Refactor for better modularity and potentially use workflow orchestrators
 - **ML Model Improvement**:
   - **More Features**: Incorporating additional features (e.g., museum type, city GDP, tourism statistics, plane tickets prices and arrivals, etc.) could improve model accuracy.

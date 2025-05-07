@@ -175,4 +175,4 @@ cython_debug/
 
 # Custom
 plan.md
-data/
+/data/
