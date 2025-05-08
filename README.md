@@ -24,7 +24,7 @@ Key components include:
 *   **`config.py`**: Stores configuration parameters (API endpoints, filtering thresholds, etc.).
 *   **`models.py`**: Defines data structures like `FetchFailureReason`.
 
-A script (`etl_exploration.py`) orchestrates these modules, running the ET steps and saving the resulting DataFrame to a CSV file (`data/enriched_museum_data.csv`). The next phase involves loading this data into a database.
+A script (`src/scripts/run_etl.py`) orchestrates these modules, running the ET steps and saving the resulting DataFrame to a CSV file (`data/enriched_museum_data.csv`). The next phase involves loading this data into a database (`visitum.db` located in the `data/` directory).
 
 ## ETL Pipeline
 
@@ -45,7 +45,7 @@ Logic resides in `src/data/extraction.py`:
 - Implements retry logic (`config.MAX_GEOCODER_RETRIES`).
 - Fetches city proper population.
 
-**Improvement idea:** Metropolitan population is a better proxy, but Geonames primarily provides city proper data. Exploring alternative providers or data sources for metropolitan area population remains a future improvement.
+
 
 **Special cases:** Handled in `src/data/transformation.py` (`handle_compound_city` function). Specific rules (e.g., Vatican City -> Rome) are currently hardcoded; moving these to config or a database lookup table would be more flexible. The general approach splits comma-separated city strings and uses the population of the largest identified part.
 
@@ -58,23 +58,24 @@ Logic resides in `src/data/transformation.py`:
 
 ### Loading
 
-- **Target**: A database (initially SQLite) to store the processed data, suitable for containerized deployment.
-- **Module**: Logic resides in `src/data/loading.py`.
-- **Process**: Takes the final DataFrame produced by the transformation step and inserts it into the database according to the defined schema.
+- **Target**: A database (initially SQLite, e.g., `data/visitum.db`) to store the processed data.
+- **Module**: Logic resides in `src/scripts/load_data_from_csv_to_db.py`.
+- **Process**: Takes the final DataFrame produced by the transformation step (e.g., `data/enriched_museum_data.csv`) and inserts it into the database according to the defined schema.
 
 ## Project Structure
 
 ```
 visitum/
 │
-├── .dockerignore
 ├── .gitignore
-├── docker-compose.yml
-├── Dockerfile           # Main application Dockerfile
-├── Dockerfile.jupyter   # Jupyter notebook Dockerfile (if separate service)
+├── .python-version
+├── pyproject.toml       # Python package definition and dependencies
 ├── README.md
-├── requirements.txt     # Python dependencies
-├── setup.py             # Packaging script (optional but good practice)
+├── data/                # Output directory for generated data, models, and DB
+│   ├── enriched_museum_data.csv
+│   ├── visitum.db
+│   └── ...              # Other generated files like model.joblib, plots
+│
 ├── src/
 │   ├── __init__.py
 │   ├── config.py        # Configuration settings
@@ -82,42 +83,47 @@ visitum/
 │   │   ├── __init__.py
 │   │   ├── models.py      # Data enums/models (FetchFailureReason)
 │   │   ├── extraction.py  # Data extraction logic (Wikipedia, Population)
-│   │   ├── transformation.py # Data cleaning and transformation
-│   │   └── loading.py     # Database loading logic
+│   │   └── transformation.py # Data cleaning and transformation
 │   ├── db/              # Database interaction modules
 │   │   ├── __init__.py
-│   │   └── models.py    # Database models (e.g., SQLAlchemy)
-│   │   └── operations.py # CRUD operations
+│   │   ├── database.py  # Database connection and session management
+│   │   ├── models.py    # Database models (e.g., SQLAlchemy)
+│   │   └── queries.py   # CRUD operations and data querying logic
 │   ├── ml/              # Machine Learning modules
 │   │   ├── __init__.py
-│   │   ├── model.py     # Linear Regression model training/prediction
-│   │   └── utils.py     # ML utilities
-│   ├── api/             # API exposure (e.g., FastAPI)
-│   │   ├── __init__.py
-│   │   ├── main.py      # API entry point
-│   │   └── endpoints.py # API routes
-│   └── utils/           # Shared utilities
-│       └── __init__.py
+│   │   ├── model.py     # Linear Regression model definition
+│   │   └── training.py  # Model training and evaluation logic
+│   └── scripts/         # Utility scripts for running pipeline stages
+│       ├── __init__.py
+│       ├── run_etl.py
+│       ├── load_data_from_csv_to_db.py
+│       ├── train_model.py
+│       └── evaluate_and_visualize_model.py
 │
 ├── notebooks/
-│   └── analysis.ipynb     # Jupyter notebook for visualization
+│   └── etl_and_training.ipynb # Jupyter notebook for exploration and visualization
 │
-└── tests/
+├── .dockerignore        # (Planned for Dockerization)
+├── docker-compose.yml   # (Planned for Dockerization)
+├── Dockerfile           # (Planned for Dockerization)
+├── Dockerfile.jupyter   # (Planned for Dockerization)
+│
+└── tests/               # (Planned: Pytest tests)
     ├── __init__.py
-    ├── conftest.py        # Pytest configuration
-    ├── data/              # Tests for data modules
-    ├── db/                # Tests for database modules
-    ├── ml/                # Tests for ML modules
-    └── api/               # Tests for API endpoints
+    ├── conftest.py
+    ├── data/
+    ├── db/
+    └── ml/
 ```
 
 ## Technology Stack
 
 - **Programming Language**: Python 3.11+
+- **Dependency Management**: `pyproject.toml` (with PDM or Poetry implicitly, or setuptools)
 - **Museum Visitors Data Extraction**: `requests`, `pandas.read_html` (`src/data/extraction.py`)
 - **City Population Data Extraction**: `geocoder` library (`src/data/extraction.py`)
 - **Data Manipulation**: `Pandas` (`src/data/transformation.py`)
-- **Data Storage**: CSV output (`etl_exploration.py`), Database (`SQLite` via `src/db`)
+- **Data Storage**: CSV output (`data/enriched_museum_data.csv`), Database (`SQLite` via `src/db`, stored at `data/visitum.db`)
 - **Configuration**: Python file (`src/config.py`)
 - **ML Library**: `scikit-learn`
 - **Containerization**: `Docker`, `Docker Compose`
@@ -129,31 +135,33 @@ visitum/
 - **Algorithm**: Linear Regression (`scikit-learn.linear_model.LinearRegression`)
 - **Features (X)**: City Metropolitan Population
 - **Target (Y)**: Museum Visitor Count (for 2024, >1.25M)
-- **Evaluation**: Standard regression metrics (e.g., R-squared, MAE, MSE). Visualizations in the Jupyter notebook.
+- **Evaluation**: Standard regression metrics (e.g., R-squared, MAE, MSE). Visualizations in the Jupyter notebook (`notebooks/etl_and_training.ipynb`).
 
 ## Setup & Usage
+
+(Note: Docker setup is planned. The following steps are for a future Dockerized version.)
 
 1.  **Prerequisites**: Docker and Docker Compose installed.
 2.  **Build**: `docker-compose build`
 3.  **Run**: `docker-compose up -d`
 4.  **Access**:
-    - API: `http://localhost:8000` (or configured port)
     - Jupyter Notebook: `http://localhost:8888` (or configured port)
+
+Currently, to run the project, you would typically execute scripts from `src/scripts/` in sequence, after setting up your Python environment and installing dependencies from `pyproject.toml`.
 
 ## Testing Strategy
 
-- **Unit Tests**: Test individual functions and classes (e.g., data extraction logic, transformation steps, database operations, API endpoint logic) using `pytest`. Mock external dependencies like API calls and database interactions.
-- **Integration Tests**: Test the interaction between components (e.g., data extraction -> transformation -> loading). Potentially test against a test database instance.
-- **End-to-End Tests**: Test the full flow (e.g., calling the API to trigger training/prediction, querying results).
+- **Unit Tests**: Test individual functions and classes (e.g., data extraction logic, transformation steps, database operations) using `pytest`. Mock external dependencies like API calls and database interactions.
+- **Integration Tests**: Test the interaction between components (e.g., data extraction -> transformation -> loading -> training). Potentially test against a test database instance.
 
 ## Design Choices & Future Considerations
 
 - **Population Data Source**: Currently using geocoder with Geonames provider. This provides city proper populations but may not always reflect metropolitan areas accurately. Future improvements needed.
-- **Dependency Management**: While the project now uses `pyproject.toml` with setuptools for managing dependencies, consider adopting a more comprehensive tool like Poetry in the future. Poetry offers advantages such as more robust dependency resolution, a `poetry.lock` file for highly reproducible builds, and integrated virtual environment management, which can be particularly beneficial as the project grows.
+- **Dependency Management**: The project uses `pyproject.toml` for managing dependencies. Adopting a specific tool like Poetry or PDM explicitly could further enhance dependency resolution and environment management.
 - **Scalability**:
-  - **Database**: Implement proper database storage (SQLite for development, PostgreSQL for production)
+  - **Database**: Implement proper database storage (SQLite for development, PostgreSQL for production). The current SQLite DB is stored at `data/visitum.db`.
   - **Caching**: Cache the wikipedia results, geocoder results, the model, its predictions, etc.
-  - **API**: Develop FastAPI endpoints to expose data and predictions, with horizontal scaling in mind.
+  - **API (Future)**: As a future enhancement, develop FastAPI endpoints to expose data and predictions, with horizontal scaling in mind.
   - **ETL**: Refactor for better modularity and potentially use workflow orchestrators
 - **ML Model Improvement**:
   - **More Features**: Incorporating additional features (e.g., museum type, city GDP, tourism statistics, plane tickets prices and arrivals, etc.) could improve model accuracy.
@@ -164,10 +172,19 @@ visitum/
 - **Museum Location Coordinates**: A significant improvement would be to use the museum's geographic coordinates to determine the appropriate city and metropolitan area. Currently, we match based on city name strings, which can be ambiguous. Using geocoder with the museum's coordinates would provide a more accurate association between museums and their metropolitan areas, leading to better population data and model accuracy.
 
 ## Future Improvements
-- **Data Sources**:
-  - **Museum Visitors**:
-    - Use the museum's geographic coordinates to determine the appropriate city and metropolitan area.
-  - **Type Safety**:
-    - Add typing to models such as Museum, City, etc for the Extraction and Transformation steps. Currently, the data is only typed for the Loading and ML steps.
-  - **Cleaning step:** 
-    - Remove outliers from the dataset.
+- **City Population**:
+  - Use the museum's geographic coordinates to determine the appropriate city and metropolitan area.
+  - Metropolitan population is a better proxy, but Geonames primarily provides city proper data. Exploring alternative providers or data sources for metropolitan area population remains a future improvement.
+- **Configuration**:
+  - Move the configuration to a database/config file.
+  - Use environment variables to configure the project, load them from a Secrets Manager for sensitive data and the rest through CI/CD pipeline.
+- **Type Safety**:
+  - Add typing to models such as Museum, City, etc for the Extraction and Transformation steps. Currently, the data is only typed for the Loading and ML steps.
+- **Scaling**:
+  - Use a more scalable database like PostgreSQL for production, possibly managed through a managed service like AWS RDS.
+  - Use a more scalable ML service like AWS SageMaker for production.
+  - Use a more scalable ETL service like AWS Glue for production.
+  - **Data Ingestion/Processing**: For very large datasets, implement chunked/paginated data loading from the database to avoid memory issues.
+  - **Distributed Computing**: For large-scale data processing and ML, consider using distributed computing frameworks like Apache Spark (e.g., using Amazon EMR on AWS).
+  - **Service**:
+  - Implement a REST API to expose the model's predictions.

@@ -72,7 +72,7 @@ def fetch_model_features(db: Session) -> pd.DataFrame:
             .filter(Museum.visitors_count.isnot(None)) # Ensure visitors_count is not null (implicitly done by schema, but good practice)
         )
         
-        df = pd.read_sql(query.statement, db.bind) 
+        df = pd.read_sql(query.statement, db.bind) #TODO: possibly need to use chunks/pagination? this probably loads it all into memory and might be a problem for larger datasets
 
         if df.empty:
             logging.warning("No valid data found for model training (check population data).")

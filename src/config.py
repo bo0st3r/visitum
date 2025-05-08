@@ -3,6 +3,8 @@
 import logging
 import os
 
+#TODO: put these in an environment variable
+
 # Wikipedia Data Fetching
 WIKIPEDIA_API_URL = "https://en.wikipedia.org/w/api.php"
 MUSEUMS_VISITORS_WIKIPEDIA_PAGE_TITLE = "List_of_most_visited_museums"
