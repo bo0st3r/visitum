@@ -149,6 +149,7 @@ visitum/
 ## Design Choices & Future Considerations
 
 - **Population Data Source**: Currently using geocoder with Geonames provider. This provides city proper populations but may not always reflect metropolitan areas accurately. Future improvements needed.
+- **Dependency Management**: While the project now uses `pyproject.toml` with setuptools for managing dependencies, consider adopting a more comprehensive tool like Poetry in the future. Poetry offers advantages such as more robust dependency resolution, a `poetry.lock` file for highly reproducible builds, and integrated virtual environment management, which can be particularly beneficial as the project grows.
 - **Scalability**:
   - **Database**: Implement proper database storage (SQLite for development, PostgreSQL for production)
   - **Caching**: Cache the wikipedia results, geocoder results, the model, its predictions, etc.
@@ -161,3 +162,12 @@ visitum/
 - **Error Handling & Monitoring**: Implement comprehensive error handling, logging, and monitoring for production deployment.
 - **CI/CD**: Set up a Continuous Integration/Continuous Deployment pipeline (e.g., using GitHub Actions, GitLab CI) to automate testing and deployment.
 - **Museum Location Coordinates**: A significant improvement would be to use the museum's geographic coordinates to determine the appropriate city and metropolitan area. Currently, we match based on city name strings, which can be ambiguous. Using geocoder with the museum's coordinates would provide a more accurate association between museums and their metropolitan areas, leading to better population data and model accuracy.
+
+## Future Improvements
+- **Data Sources**:
+  - **Museum Visitors**:
+    - Use the museum's geographic coordinates to determine the appropriate city and metropolitan area.
+  - **Type Safety**:
+    - Add typing to models such as Museum, City, etc for the Extraction and Transformation steps. Currently, the data is only typed for the Loading and ML steps.
+  - **Cleaning step:** 
+    - Remove outliers from the dataset.

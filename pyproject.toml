@@ -5,6 +5,21 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "visitum_project"
 version = "0.1.0" 
+dependencies = [
+    "wikipedia-api",
+    "pandas",
+    "requests",
+    "beautifulsoup4",
+    "jupyterlab",
+    "matplotlib",
+    "seaborn",
+    "scikit-learn",
+    "lxml",
+    "html5lib",
+    "geocoder",
+    "SQLAlchemy>=1.4",
+    "joblib",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"] # Tell setuptools packages are under src
