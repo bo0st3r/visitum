@@ -28,11 +28,6 @@ from data.transformation import clean_museum_data, enrich_museums_with_city_popu
 
 def setup_logging():
     """Configures logging for the script."""
-    logging.basicConfig(
-        level=config.LOG_LEVEL,
-        format=config.LOG_FORMAT,
-        datefmt=config.LOG_DATE_FORMAT,
-    ) 
     logging.getLogger("geocoder").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
 
