@@ -28,15 +28,15 @@ LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 # Define project root assuming this config file is in src/
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-# Database configuration
-# Use an absolute path derived from the project root
-DATABASE_URL = f"sqlite:///{os.path.join(PROJECT_ROOT, 'data/visitum.db')}"
-
 # Data file paths
 # Derive data paths from project root
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+
+# Database configuration
+# Use an absolute path derived from the project root
+DATABASE_URL = f"sqlite:///{os.path.join(DATA_DIR, 'visitum.db')}"
+
 ENRICHED_DATA_CSV = os.path.join(DATA_DIR, "enriched_museum_data.csv")
-OUTPUT_FILENAME = ENRICHED_DATA_CSV
 
 # Model file paths
 MODEL_FILENAME = "trained_regression_model.joblib"
