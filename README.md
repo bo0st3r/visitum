@@ -16,15 +16,17 @@ Build and containerize a Python application that extracts museum visitor data (W
 
 ### Current Implementation
 
-The project currently implements the Extract and Transform (ET) phases of the data pipeline within the `src/data` package. 
+The project currently implements the Extract, Transform, and Load (ETL) phases of the data pipeline, along with initial model training.
 
 Key components include:
-*   **`extraction.py`**: Fetches raw museum data from Wikipedia and city population data using the `geocoder` library.
-*   **`transformation.py`**: Cleans, filters (Year 2024, >1.25M visitors), and enriches the museum data with corresponding city populations, handling parallel processing and edge cases like compound city names.
-*   **`config.py`**: Stores configuration parameters (API endpoints, filtering thresholds, etc.).
-*   **`models.py`**: Defines data structures like `FetchFailureReason`.
+*   **`extraction.py`** (`src/data/extraction.py`): Fetches raw museum data from Wikipedia and city population data using the `geocoder` library.
+*   **`transformation.py`** (`src/data/transformation.py`): Cleans, filters (Year 2024, >1.25M visitors), and enriches the museum data with corresponding city populations.
+*   **`config.py`** (`src/config.py`): Stores configuration parameters.
+*   **`models.py`** (`src/data/models.py`): Defines data structures for the ET process.
+*   **Database Loading**: The script `src/scripts/load_data_from_csv_to_db.py` loads the transformed data from `data/enriched_museum_data.csv` into an SQLite database (`data/visitum.db`).
+*   **Model Training**: The script `src/scripts/train_model.py` trains a linear regression model using the data from the database and saves the model to `data/trained_regression_model.joblib`.
 
-A script (`src/scripts/run_etl.py`) orchestrates these modules, running the ET steps and saving the resulting DataFrame to a CSV file (`data/enriched_museum_data.csv`). The next phase involves loading this data into a database (`visitum.db` located in the `data/` directory).
+The ET steps are orchestrated by `src/scripts/run_etl.py`, which produces `data/enriched_museum_data.csv` and `data/visitum.db` as outputs. Subsequent scripts handle database loading and model training, which outputs `data/trained_regression_model.joblib`.
 
 ## ETL Pipeline
 
@@ -98,9 +100,9 @@ visitum/
 │       ├── run_etl.py
 │       ├── load_data_from_csv_to_db.py
 │       ├── train_model.py
-│       └── evaluate_and_visualize_model.py
 │
 ├── notebooks/
+│   └── analysis.ipynb # Jupyter notebook for model evaluation and visualization of results
 │   └── etl_and_training.ipynb # Jupyter notebook for exploration and visualization
 │
 ├── .dockerignore        # (Planned for Dockerization)
@@ -122,7 +124,7 @@ visitum/
 - **Dependency Management**: `pyproject.toml` (with PDM or Poetry implicitly, or setuptools)
 - **Museum Visitors Data Extraction**: `requests`, `pandas.read_html` (`src/data/extraction.py`)
 - **City Population Data Extraction**: `geocoder` library (`src/data/extraction.py`)
-- **Data Manipulation**: `Pandas` (`src/data/transformation.py`)
+- **Data Manipulation**: `Pandas`, `Numpy` (`src/data/transformation.py`, `notebooks/`)
 - **Data Storage**: CSV output (`data/enriched_museum_data.csv`), Database (`SQLite` via `src/db`, stored at `data/visitum.db`)
 - **Configuration**: Python file (`src/config.py`)
 - **ML Library**: `scikit-learn`
@@ -135,7 +137,7 @@ visitum/
 - **Algorithm**: Linear Regression (`scikit-learn.linear_model.LinearRegression`)
 - **Features (X)**: City Metropolitan Population
 - **Target (Y)**: Museum Visitor Count (for 2024, >1.25M)
-- **Evaluation**: Standard regression metrics (e.g., R-squared, MAE, MSE). Visualizations in the Jupyter notebook (`notebooks/etl_and_training.ipynb`).
+- **Evaluation**: Standard regression metrics (e.g., R-squared, MAE, MSE). Visualizations in the Jupyter notebook (`notebooks/analysis.ipynb`). Initial results with simple linear regression indicate a weak correlation between city population and museum visitor count, suggesting that population alone is not a strong predictor and other factors or more complex models should be considered for better performance.
 
 ## Setup & Usage
 
