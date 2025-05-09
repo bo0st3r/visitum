@@ -27,12 +27,11 @@ ENV PYTHONPATH="/app/src:${PYTHONPATH}"
 # Make the entrypoint script executable
 RUN chmod +x /app/entrypoint.sh
 
+# Create the data directory and ensure it's writable
+RUN mkdir -p /app/data && chmod -R 777 /app/data
+
 # The entrypoint script will handle data generation and then execute the CMD
 ENTRYPOINT ["/app/entrypoint.sh"]
-
-# Create the data directory - entrypoint also does mkdir -p, but this is good practice
-# The actual data generation RUN commands are removed from here
-RUN mkdir -p /app/data
 
 # Expose the Jupyter Notebook port
 EXPOSE 8888

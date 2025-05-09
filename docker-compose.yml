@@ -6,7 +6,10 @@ services:
       - "8888:8888"
     volumes:
       - ./notebooks:/app/notebooks
-      - ./docker-data:/app/data
+      - visitum_data_volume:/app/data
     environment:
       # Ensures Python outputs everything directly, making logs more visible
       PYTHONUNBUFFERED: 1 
+
+volumes:
+  visitum_data_volume: 
