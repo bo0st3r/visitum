@@ -141,15 +141,77 @@ visitum/
 
 ## Setup & Usage
 
-(Note: Docker setup is planned. The following steps are for a future Dockerized version.)
+This project is designed to be run using Docker and Docker Compose, which handles the setup of the Python environment, data generation, model training, and running the JupyterLab server.
 
-1.  **Prerequisites**: Docker and Docker Compose installed.
-2.  **Build**: `docker-compose build`
-3.  **Run**: `docker-compose up -d`
-4.  **Access**:
-    - Jupyter Notebook: `http://localhost:8888` (or configured port)
+### Prerequisites
 
-Currently, to run the project, you would typically execute scripts from `src/scripts/` in sequence, after setting up your Python environment and installing dependencies from `pyproject.toml`.
+1.  **Install Docker Desktop**: Ensure Docker Desktop (or Docker Engine and Docker Compose separately for Linux users) is installed and running on your system. You can download it from the [official Docker website](https://www.docker.com/products/docker-desktop/).
+
+### Running the Application
+
+1.  **Clone the Project** (if you haven't already):
+    ```bash
+    git clone <your_repository_url> # Replace with your project's Git repository URL
+    cd visitum # Or your project's root directory name
+    ```
+
+2.  **Build and Start the Application**:
+    Open your terminal, navigate to the root directory of the project (where `docker-compose.yml` and `Dockerfile` are located), and run:
+    ```bash
+    docker-compose up --build
+    ```
+    *   The `--build` flag tells Docker Compose to build the Docker image based on the `Dockerfile` before starting the services. This is necessary the first time you run it or if you've made changes to the application code or Docker configuration.
+    *   The first build might take a few minutes as it downloads the base Python image, installs dependencies, and runs the initial data processing and model training scripts.
+    *   Subsequent runs (if no code/config changes require a rebuild) can be started with just `docker-compose up`.
+
+3.  **Access JupyterLab**:
+    Once the build is complete and the container is running, you'll see log messages in your terminal. JupyterLab will be accessible in your web browser at:
+    [http://localhost:8888](http://localhost:8888)
+    You should not be prompted for a token.
+
+4.  **Open and Run the Notebook**:
+    *   In the JupyterLab file browser (usually on the left), navigate into the `notebooks` directory.
+    *   Open the `analysis.ipynb` notebook.
+    *   You can now run the cells in the notebook. It will use the `visitum.db` database and the pre-trained model generated when the container started.
+
+### Generated Data
+
+*   A directory named `docker-data` will be created in your project's root directory on your host machine.
+*   This `docker-data` directory is synchronized with the `/app/data` directory inside the Docker container.
+*   When the application starts for the first time (or if `docker-data` is empty), the `entrypoint.sh` script will execute the data extraction, database loading, and model training scripts. The generated `visitum.db` and `trained_regression_model.joblib` will appear in this `docker-data` folder.
+
+### Stopping the Application
+
+1.  Go to the terminal where `docker-compose up` is running.
+2.  Press `Ctrl+C` to stop the container(s).
+3.  To remove the stopped containers (and free up resources), you can optionally run:
+    ```bash
+    docker-compose down
+    ```
+    This command does not remove the `docker-data` directory or the Docker image itself.
+
+### Forcing a Full Rebuild (Simulating a New Computer)
+
+If you want to ensure a completely fresh build, ignoring all local Docker caches (useful for testing or troubleshooting):
+
+1.  Stop and remove containers and volumes:
+    ```bash
+    docker-compose down --volumes
+    ```
+2.  Delete the local data directory:
+    ```bash
+    rm -rf ./docker-data # On Linux/macOS
+    # For Windows (Command Prompt): rmdir /s /q docker-data
+    # For Windows (PowerShell): Remove-Item -Recurse -Force ./docker-data
+    ```
+3.  (Optional, but thorough) Prune all Docker build cache:
+    ```bash
+    docker builder prune -a -f
+    ```
+4.  Build and run without cache:
+    ```bash
+    docker-compose up --build --no-cache
+    ```
 
 ## Testing Strategy
 
