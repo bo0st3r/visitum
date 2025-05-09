@@ -12,22 +12,6 @@ Build and containerize a Python application that extracts museum visitor data (W
 - **Visitor Year**: the source also says that the data is for the year 2024, however for some entities the year is 2023 or even 2022. After asking Simon for clarification, it was said to use the year 2024 only, therefore remove some entities from the dataset.
 - **Regression Input**: being unsure of the expected model input: (1) Museum Visitors or (2) Total Museum Visitors For The City, I asked for clarification and was told "would go for something simpler that fits in the time and keep the broader for discussion". I went with option 1 which is simpler and probably more relevant for the end goal.
 
-## Implementation Status
-
-### Current Implementation
-
-The project currently implements the Extract, Transform, and Load (ETL) phases of the data pipeline, along with initial model training.
-
-Key components include:
-*   **`extraction.py`** (`src/data/extraction.py`): Fetches raw museum data from Wikipedia and city population data using the `geocoder` library.
-*   **`transformation.py`** (`src/data/transformation.py`): Cleans, filters (Year 2024, >1.25M visitors), and enriches the museum data with corresponding city populations.
-*   **`config.py`** (`src/config.py`): Stores configuration parameters.
-*   **`models.py`** (`src/data/models.py`): Defines data structures for the ET process.
-*   **Database Loading**: The script `src/scripts/load_data_from_csv_to_db.py` loads the transformed data from `data/enriched_museum_data.csv` into an SQLite database (`data/visitum.db`).
-*   **Model Training**: The script `src/scripts/train_model.py` trains a linear regression model using the data from the database and saves the model to `data/trained_regression_model.joblib`.
-
-The ET steps are orchestrated by `src/scripts/run_etl.py`, which produces `data/enriched_museum_data.csv` and `data/visitum.db` as outputs. Subsequent scripts handle database loading and model training, which outputs `data/trained_regression_model.joblib`.
-
 ## ETL Pipeline
 
 ### Extraction
@@ -64,6 +48,9 @@ Logic resides in `src/data/transformation.py`:
 - **Module**: Logic resides in `src/scripts/load_data_from_csv_to_db.py`.
 - **Process**: Takes the final DataFrame produced by the transformation step (e.g., `data/enriched_museum_data.csv`) and inserts it into the database according to the defined schema.
 
+The ET steps are orchestrated by `src/scripts/run_etl.py`, which produces `data/enriched_museum_data.csv` and `src/scripts/load_data_from_csv_to_db.py` loads it into the `data/visitum.db` database. 
+Then, `src/scripts/train_model.py` trains a linear regression model using the data from the database and saves the model to `data/trained_regression_model.joblib`.
+
 ## Project Structure
 
 ```
@@ -73,42 +60,40 @@ visitum/
 ├── .python-version
 ├── pyproject.toml       # Python package definition and dependencies
 ├── README.md
-├── data/                # Output directory for generated data, models, and DB
-│   ├── enriched_museum_data.csv
-│   ├── visitum.db
-│   └── ...              # Other generated files like model.joblib, plots
+├── Dockerfile           # Defines the Docker image for the application
+├── docker-compose.yml   # Defines services, networks, and volumes for Docker
+├── entrypoint.sh        # Script executed when Docker container starts
+│
+├── docker-data/         # Output directory for generated data (DB, model, CSVs) - mounted from host
+│   ├── enriched_museum_data.csv # (Example output)
+│   ├── visitum.db             # (Example output)
+│   └── trained_regression_model.joblib # (Example output)
 │
 ├── src/
 │   ├── __init__.py
 │   ├── config.py        # Configuration settings
 │   ├── data/            # Data processing modules (ETL)
 │   │   ├── __init__.py
-│   │   ├── models.py      # Data enums/models (FetchFailureReason)
+│   │   ├── models.py      # Data enums/models (e.g., FetchFailureReason)
 │   │   ├── extraction.py  # Data extraction logic (Wikipedia, Population)
 │   │   └── transformation.py # Data cleaning and transformation
 │   ├── db/              # Database interaction modules
 │   │   ├── __init__.py
 │   │   ├── database.py  # Database connection and session management
-│   │   ├── models.py    # Database models (e.g., SQLAlchemy)
+│   │   ├── models.py    # Database models (SQLAlchemy)
 │   │   └── queries.py   # CRUD operations and data querying logic
 │   ├── ml/              # Machine Learning modules
 │   │   ├── __init__.py
-│   │   ├── model.py     # Linear Regression model definition
-│   │   └── training.py  # Model training and evaluation logic
+│   │   └── model.py     # Core ML model definitions (e.g., Linear Regression)
 │   └── scripts/         # Utility scripts for running pipeline stages
 │       ├── __init__.py
-│       ├── run_etl.py
-│       ├── load_data_from_csv_to_db.py
-│       ├── train_model.py
+│       ├── run_etl.py   # Orchestrates ETL, produces CSV
+│       ├── load_data_from_csv_to_db.py # Loads CSV data into the database
+│       └── train_model.py # Trains the ML model and saves it
 │
 ├── notebooks/
-│   └── analysis.ipynb # Jupyter notebook for model evaluation and visualization of results
-│   └── etl_and_training.ipynb # Jupyter notebook for exploration and visualization
-│
-├── .dockerignore        # (Planned for Dockerization)
-├── docker-compose.yml   # (Planned for Dockerization)
-├── Dockerfile           # (Planned for Dockerization)
-├── Dockerfile.jupyter   # (Planned for Dockerization)
+│   └── analysis.ipynb # Main Jupyter notebook for model evaluation and visualization
+│   └── etl_and_training.ipynb # Exploratory notebook (optional, not primary deliverable)
 │
 └── tests/               # (Planned: Pytest tests)
     ├── __init__.py
@@ -121,7 +106,7 @@ visitum/
 ## Technology Stack
 
 - **Programming Language**: Python 3.11+
-- **Dependency Management**: `pyproject.toml` (with PDM or Poetry implicitly, or setuptools)
+- **Dependency Management**: `pyproject.toml`
 - **Museum Visitors Data Extraction**: `requests`, `pandas.read_html` (`src/data/extraction.py`)
 - **City Population Data Extraction**: `geocoder` library (`src/data/extraction.py`)
 - **Data Manipulation**: `Pandas`, `Numpy` (`src/data/transformation.py`, `notebooks/`)
@@ -129,7 +114,6 @@ visitum/
 - **Configuration**: Python file (`src/config.py`)
 - **ML Library**: `scikit-learn`
 - **Containerization**: `Docker`, `Docker Compose`
-- **Notebook Environment**: `JupyterLab` or `Jupyter Notebook`
 - **Testing**: `pytest`
 
 ## Machine Learning Model
@@ -151,27 +135,22 @@ This project is designed to be run using Docker and Docker Compose, which handle
 
 1.  **Clone the Project** (if you haven't already):
     ```bash
-    git clone <your_repository_url> # Replace with your project's Git repository URL
-    cd visitum # Or your project's root directory name
+    git clone https://github.com/bo0st3r/visitum.git
+    cd visitum
     ```
 
 2.  **Build and Start the Application**:
-    Open your terminal, navigate to the root directory of the project (where `docker-compose.yml` and `Dockerfile` are located), and run:
+    In the root directory of the project run:
     ```bash
     docker-compose up --build
     ```
-    *   The `--build` flag tells Docker Compose to build the Docker image based on the `Dockerfile` before starting the services. This is necessary the first time you run it or if you've made changes to the application code or Docker configuration.
-    *   The first build might take a few minutes as it downloads the base Python image, installs dependencies, and runs the initial data processing and model training scripts.
-    *   Subsequent runs (if no code/config changes require a rebuild) can be started with just `docker-compose up`.
 
 3.  **Access JupyterLab**:
     Once the build is complete and the container is running, you'll see log messages in your terminal. JupyterLab will be accessible in your web browser at:
     [http://localhost:8888](http://localhost:8888)
-    You should not be prompted for a token.
 
 4.  **Open and Run the Notebook**:
-    *   In the JupyterLab file browser (usually on the left), navigate into the `notebooks` directory.
-    *   Open the `analysis.ipynb` notebook.
+    *   In the JupyterLab file browser (usually on the left), open the `analysis.ipynb` notebook
     *   You can now run the cells in the notebook. It will use the `visitum.db` database and the pre-trained model generated when the container started.
 
 ### Generated Data
@@ -190,65 +169,60 @@ This project is designed to be run using Docker and Docker Compose, which handle
     ```
     This command does not remove the `docker-data` directory or the Docker image itself.
 
-### Forcing a Full Rebuild (Simulating a New Computer)
-
-If you want to ensure a completely fresh build, ignoring all local Docker caches (useful for testing or troubleshooting):
-
-1.  Stop and remove containers and volumes:
-    ```bash
-    docker-compose down --volumes
-    ```
-2.  Delete the local data directory:
-    ```bash
-    rm -rf ./docker-data # On Linux/macOS
-    # For Windows (Command Prompt): rmdir /s /q docker-data
-    # For Windows (PowerShell): Remove-Item -Recurse -Force ./docker-data
-    ```
-3.  (Optional, but thorough) Prune all Docker build cache:
-    ```bash
-    docker builder prune -a -f
-    ```
-4.  Build and run without cache:
-    ```bash
-    docker-compose up --build --no-cache
-    ```
-
 ## Testing Strategy
 
 - **Unit Tests**: Test individual functions and classes (e.g., data extraction logic, transformation steps, database operations) using `pytest`. Mock external dependencies like API calls and database interactions.
 - **Integration Tests**: Test the interaction between components (e.g., data extraction -> transformation -> loading -> training). Potentially test against a test database instance.
 
-## Design Choices & Future Considerations
+## Design Choices & Future Enhancements
 
-- **Population Data Source**: Currently using geocoder with Geonames provider. This provides city proper populations but may not always reflect metropolitan areas accurately. Future improvements needed.
-- **Dependency Management**: The project uses `pyproject.toml` for managing dependencies. Adopting a specific tool like Poetry or PDM explicitly could further enhance dependency resolution and environment management.
-- **Scalability**:
-  - **Database**: Implement proper database storage (SQLite for development, PostgreSQL for production). The current SQLite DB is stored at `data/visitum.db`.
-  - **Caching**: Cache the wikipedia results, geocoder results, the model, its predictions, etc.
-  - **API (Future)**: As a future enhancement, develop FastAPI endpoints to expose data and predictions, with horizontal scaling in mind.
-  - **ETL**: Refactor for better modularity and potentially use workflow orchestrators
-- **ML Model Improvement**:
-  - **More Features**: Incorporating additional features (e.g., museum type, city GDP, tourism statistics, plane tickets prices and arrivals, etc.) could improve model accuracy.
-  - **Different Models**: Exploring other regression models (e.g., Polynomial Regression, Gradient Boosting) might yield better results.
-  - **Regularization**: Apply regularization techniques if overfitting is observed.
-- **Error Handling & Monitoring**: Implement comprehensive error handling, logging, and monitoring for production deployment.
-- **CI/CD**: Set up a Continuous Integration/Continuous Deployment pipeline (e.g., using GitHub Actions, GitLab CI) to automate testing and deployment.
-- **Museum Location Coordinates**: A significant improvement would be to use the museum's geographic coordinates to determine the appropriate city and metropolitan area. Currently, we match based on city name strings, which can be ambiguous. Using geocoder with the museum's coordinates would provide a more accurate association between museums and their metropolitan areas, leading to better population data and model accuracy.
+This section outlines potential areas for future improvement and scaling.
 
-## Future Improvements
-- **City Population**:
-  - Use the museum's geographic coordinates to determine the appropriate city and metropolitan area.
-  - Metropolitan population is a better proxy, but Geonames primarily provides city proper data. Exploring alternative providers or data sources for metropolitan area population remains a future improvement.
-- **Configuration**:
-  - Move the configuration to a database/config file.
-  - Use environment variables to configure the project, load them from a Secrets Manager for sensitive data and the rest through CI/CD pipeline.
+### Data Sources & Enrichment
+- **Population Data Source & Museum Geolocation**:
+    - Currently, `geocoder` with Geonames provides city proper populations. Museum-to-city association is based on city name strings.
+    - **Improvement**: Explore alternative data providers or sources specifically for metropolitan area populations, as this is often a better correlate for visitor numbers than city proper population.
+    - **Improvement**: A significant enhancement is to use precise museum geographic coordinates for geocoding. This would more accurately determine the relevant city and its metropolitan area, leading to better population data for the model. 
+
+### ETL Process
+- **Loading to Database**: Currently, data is saved to a CSV before being loaded into the database. This was a shortcut during prototyping.
+    - **Improvement**: Load data directly into the database from the ETL script for efficiency.
+- **Modularity & Orchestration**:
+    - **Improvement**: Refactor ETL for better modularity. For more complex workflows, consider using a workflow orchestrator (e.g. AWS Step Functions).
+
+### Configuration Management
+- **Current**: Configuration is managed via `src/config.py`.
+    - **Improvement**: For more complex or sensitive configurations, move settings to a dedicated configuration file (e.g., YAML, TOML), environment variables (especially for secrets, potentially managed via a secrets manager), or a configuration database.
+
+### Scalability
+- **Database**:
+    - SQLite is used for development (`data/visitum.db`).
+    - **Improvement**: For production, migrate to a more robust and scalable database like PostgreSQL, potentially a managed service (e.g., AWS RDS).
+- **Caching**:
+    - **Improvement**: Implement caching for Wikipedia API results, geocoder results, the trained model, and potentially model predictions to reduce redundant computations and API calls.
+- **API & Service Endpoints**:
+    - **Improvement**: Develop FastAPI (or similar) endpoints to expose data, model predictions, and potentially trigger ETL/training processes. Design for horizontal scaling.
+- **Data Ingestion/Processing (Large Scale)**:
+    - **Improvement**: For very large datasets, implement chunked/paginated data loading and processing to manage memory effectively.
+- **Distributed Computing**:
+    - **Improvement**: For large-scale data processing and ML model training, consider frameworks like Apache Spark (e.g., via Amazon EMR on AWS).
+- **ML Serving**:
+    - **Improvement**: Deploy the ML model using a dedicated serving solution (e.g. AWS SageMaker) for better scalability, monitoring, and versioning.
+
+### Machine Learning Model
+- **Feature Engineering**:
+    - **Improvement**: Incorporate additional features (e.g., museum type, city GDP, tourism statistics, flight arrivals, hotel occupancy rates) to potentially improve model accuracy.
+- **Model Selection**:
+    - **Improvement**: Explore more advanced models.
+- **Preventing Overfitting**:
+    - **Improvement**: If we explore more complex models in the future, we would also incorporate techniques to prevent overfitting. This ensures the model learns general patterns from the data rather than memorizing the training set, leading to better performance on new, unseen data.
+
+### Development & Operations
+- **Dependency Management**: The project uses `pyproject.toml`.
+    - **Consideration**: Adopting a tool like Poetry could further streamline dependency resolution and environment management.
 - **Type Safety**:
-  - Add typing to models such as Museum, City, etc for the Extraction and Transformation steps. Currently, the data is only typed for the Loading and ML steps.
-- **Scaling**:
-  - Use a more scalable database like PostgreSQL for production, possibly managed through a managed service like AWS RDS.
-  - Use a more scalable ML service like AWS SageMaker for production.
-  - Use a more scalable ETL service like AWS Glue for production.
-  - **Data Ingestion/Processing**: For very large datasets, implement chunked/paginated data loading from the database to avoid memory issues.
-  - **Distributed Computing**: For large-scale data processing and ML, consider using distributed computing frameworks like Apache Spark (e.g., using Amazon EMR on AWS).
-  - **Service**:
-  - Implement a REST API to expose the model's predictions.
+    - **Improvement**: Extend type hinting (e.g., using Pydantic models) to data structures used in the extraction and transformation steps, not just for database and ML components.
+- **Error Handling & Monitoring**:
+    - **Improvement**: Implement comprehensive error handling, structured logging, and monitoring dashboards (e.g., using Prometheus, Grafana, or cloud-native solutions) for production deployment.
+- **CI/CD**:
+    - **Improvement**: Set up a Continuous Integration/Continuous Deployment (CI/CD) pipeline (e.g., GitHub Actions, GitLab CI, Jenkins) to automate testing, building, and deployment processes.
