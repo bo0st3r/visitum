@@ -3,7 +3,7 @@
 import logging
 import pandas as pd
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split # Although not strictly required by assignment, good practice
+from sklearn.model_selection import train_test_split 
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ def train_regression_model(features_df: pd.DataFrame) -> LinearRegression | None
         y = features_df['visitors_count']
 
         # While the assignment doesn't explicitly require evaluation, splitting helps evaluate the model's performance.
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.8, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.8, test_size=0.2, random_state=42)
 
         # Initialize and train the model
         model = LinearRegression()
