@@ -187,6 +187,10 @@ This command will automatically discover and run all tests, utilizing multiple c
 This section outlines potential areas for future improvement and scaling.
 
 ### Data Sources & Enrichment
+- **Museum Visitors Data Source**:
+    - Currently, Wikipedia is used to fetch museum visitors data.
+    - **Improvement**: Explore alternative data sources for museum visitors data that are more reliable and up-to-date. Wikipedia is not always up to date and relies on manual updates from users.
+    
 - **Population Data Source & Museum Geolocation**:
     - Currently, `geocoder` with Geonames provides city proper populations. Museum-to-city association is based on city name strings.
     - **Improvement**: Explore alternative data providers or sources specifically for metropolitan area populations, as this is often a better correlate for visitor numbers than city proper population.
