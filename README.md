@@ -95,7 +95,7 @@ visitum/
 │   └── analysis.ipynb # Main Jupyter notebook for model evaluation and visualization
 │   └── etl_and_training.ipynb # Exploratory notebook (optional, not primary deliverable)
 │
-└── tests/               # (Planned: Pytest tests)
+└── tests/              
     ├── __init__.py
     ├── conftest.py
     ├── data/
@@ -169,10 +169,18 @@ This project is designed to be run using Docker and Docker Compose, which handle
     ```
     This command does not remove the `docker-data` directory or the Docker image itself.
 
-## Testing Strategy
+## Testing
 
-- **Unit Tests**: Test individual functions and classes (e.g., data extraction logic, transformation steps, database operations) using `pytest`. Mock external dependencies like API calls and database interactions.
-- **Integration Tests**: Test the interaction between components (e.g., data extraction -> transformation -> loading -> training). Potentially test against a test database instance.
+The project includes a suite of unit and integration tests developed using `pytest`. These tests cover individual functions, classes, and the interactions between different components of the ETL pipeline and ML model training. External dependencies such as API calls and database interactions are mocked where appropriate to ensure isolated and reliable tests.
+
+### Running Tests
+
+To run the tests, navigate to the project's root directory and execute the following command:
+
+```bash
+pytest -n auto
+```
+This command will automatically discover and run all tests, utilizing multiple cores if available for faster execution (not really necessary atm but good practice).
 
 ## Design Choices & Future Enhancements
 
@@ -216,6 +224,9 @@ This section outlines potential areas for future improvement and scaling.
     - **Improvement**: Explore more advanced models.
 - **Preventing Overfitting**:
     - **Improvement**: If we explore more complex models in the future, we would also incorporate techniques to prevent overfitting. This ensures the model learns general patterns from the data rather than memorizing the training set, leading to better performance on new, unseen data.
+
+#### Research
+Some [research on time series forecasting for museum visitors](https://github.com/Di40/Time-Series-Forecasting-Museum-Visitors?tab=readme-ov-file).
 
 ### Development & Operations
 - **Dependency Management**: The project uses `pyproject.toml`.

@@ -38,7 +38,7 @@ def clean_museum_data(df: pd.DataFrame) -> Optional[pd.DataFrame]:
     ]
     logging.debug(f"Standardized columns: {cleaned_df.columns.tolist()}")
 
-    # --- Visitor Count and Year Extraction ---
+    #  Visitor Count and Year Extraction
     visitor_col = None
     # Prioritize columns matching the expected pattern or common names
     possible_visitor_cols = [
@@ -70,7 +70,7 @@ def clean_museum_data(df: pd.DataFrame) -> Optional[pd.DataFrame]:
 
     def _extract_visitor_info(
         value_str,
-    ):  #TODO: improve input formats coverage, and add tests for them
+    ):  # TODO: improve input formats coverage, and add tests for them
         try:
             value_str = str(value_str).strip()
             value_str = re.sub(r"\[\d+\]", "", value_str)  # Remove citation like [1]
@@ -125,7 +125,7 @@ def clean_museum_data(df: pd.DataFrame) -> Optional[pd.DataFrame]:
     cleaned_df["visitors_count"] = cleaned_df["visitors_count"].astype(int)
     cleaned_df["visitors_year"] = cleaned_df["visitors_year"].astype(int)
 
-    # --- Filtering ---
+    #  Filtering
     logging.info(f"Rows before filtering: {len(cleaned_df)}")
     # 1. Filter for Year == 2024
     cleaned_df = cleaned_df[cleaned_df["visitors_year"] == 2024].copy()
@@ -144,7 +144,7 @@ def clean_museum_data(df: pd.DataFrame) -> Optional[pd.DataFrame]:
         )
         return cleaned_df
 
-    # --- Final Column Selection and Renaming ---
+    #  Final Column Selection and Renaming
     # Ensure essential columns exist, handling potential variations in naming
     final_cols_map = {
         "name": "name",  # Standardized name column
@@ -222,7 +222,7 @@ def handle_compound_city(city_string: str, country: str) -> Optional[int]:
     original_city_string = city_string  # Keep for logging
     original_country = country
 
-    # --- Special Case Handling ---
+    #  Special Case Handling
     # TODO: Move these rules to a configuration file or database for flexibility.
     city_lower = city_string.lower()
     country_lower = country.lower()
@@ -241,7 +241,7 @@ def handle_compound_city(city_string: str, country: str) -> Optional[int]:
         country = "United Kingdom"
     # Add more rules here as needed
 
-    # --- General Handling for Comma-Separated Cities ---
+    #  General Handling for Comma-Separated Cities
     cities = [city.strip() for city in city_string.split(",") if city.strip()]
 
     if not cities:
@@ -254,7 +254,7 @@ def handle_compound_city(city_string: str, country: str) -> Optional[int]:
         # Single city (or normalized to one), fetch its population
         return fetch_city_population_with_geocoder(cities[0], country)
 
-    # --- Multiple Cities Detected --- #
+    #  Multiple Cities Detected  #
     logging.info(
         f"Handling multiple cities for '{original_city_string}, {original_country}': {cities}"
     )

@@ -1,13 +1,17 @@
 {
-    "cSpell.words": [
-        "conftest",
-        "geocoder",
-        "geonames",
-        "ipynb",
-        "Kensington",
-        "overfitting",
-        "Pytest",
-        "scikit",
-        "visitum"
-    ]
+  "cSpell.words": [
+    "conftest",
+    "geocoder",
+    "geonames",
+    "ipynb",
+    "Kensington",
+    "overfitting",
+    "Pytest",
+    "scikit",
+    "visitum"
+  ],
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["${workspaceFolder}/tests"],
+  "python.testing.unittestEnabled": true,
+  "python.languageServer": "Pylance"
 }
